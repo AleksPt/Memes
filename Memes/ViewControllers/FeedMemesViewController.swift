@@ -86,3 +86,8 @@ class FeedMemesViewController: UICollectionViewController {
     */
 
 }
+
+// MARK: - Networking
+extension FeedMemesViewController {
+    
+}
