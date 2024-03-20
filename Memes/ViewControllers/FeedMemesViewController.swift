@@ -9,49 +9,35 @@ import UIKit
 
 final class FeedMemesViewController: UICollectionViewController {
 
-    private var memes: [Meme]? = []
+    private let networkManager = NetworkManager.shared
+    
+    private var memes: [Meme] = []
+    
+    private let refresh = UIRefreshControl()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         fetchMem()
+        collectionView.addSubview(refresh)
+        refresh.addTarget(self, action: #selector(refreshAction), for: .valueChanged)
     }
-
-    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        memes?.count ?? 0
-    }
-
-    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MemCell.reuseId, for: indexPath)
     
-        guard let cell = cell as? MemCell else { return UICollectionViewCell() }
-        
-        let cellItem = memes?[indexPath.item]
-        
-        cell.configureCell(url: cellItem?.url ?? "")
-        
-        return cell
+    @objc private func refreshAction() {
+        fetchMem()
     }
-}
-
-// MARK: - Networking
-extension FeedMemesViewController {
+    
     private func fetchMem() {
-        URLSession.shared.dataTask(
-            with: URL(string: "https://api.imgflip.com/get_memes")!
-        ) { [unowned self] data, _, error in
-            guard let data else {
-                print(error?.localizedDescription ?? "No error description")
-                return
+        networkManager.fetchMem(from: Link.mem.url) { [unowned self] result in
+            switch result {
+            case .success(let success):
+                memes = success.data.memes
+                self.memes.shuffle()
+                self.collectionView.reloadData()
+                self.refresh.endRefreshing()
+            case .failure(let error):
+                print(error)
             }
-            
-            do {
-                let responseData = try JSONDecoder().decode(Mem.self, from: data)
-                memes = responseData.data.memes
-                memes?.shuffle()
-            } catch {
-                print(error.localizedDescription)
-            }
-        }.resume()
+        }
     }
 }
 
@@ -69,5 +55,29 @@ extension FeedMemesViewController: UICollectionViewDelegateFlowLayout {
             width: widthCell - 50,
             height: widthCell / 1.5
         )
+    }
+}
+
+// MARK: - UICollectionViewDataSource
+extension FeedMemesViewController {
+    override func collectionView(
+        _ collectionView: UICollectionView,
+        numberOfItemsInSection section: Int
+    ) -> Int {
+        memes.count
+    }
+
+    override func collectionView(
+        _ collectionView: UICollectionView,
+        cellForItemAt indexPath: IndexPath
+    ) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: MemCell.reuseId,
+            for: indexPath
+        )
+        guard let cell = cell as? MemCell else { return UICollectionViewCell() }
+        let cellItem = memes[indexPath.item]
+        cell.configure(with: cellItem)
+        return cell
     }
 }

@@ -16,5 +16,5 @@ struct DataInfo: Decodable {
 }
 
 struct Meme: Decodable {
-    let url: String
+    let url: URL
 }

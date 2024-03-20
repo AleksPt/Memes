@@ -28,11 +28,13 @@ final class MemCell: UICollectionViewCell {
         memImage.image = nil
     }
     
-    func configureCell(url: String) {
-        guard let url = URL(string: url) else {
-            memImage.image = .noimg
-            return
+    func configure(with mem: Meme) {
+        DispatchQueue.global().async {
+            guard let imageData = try? Data(contentsOf: mem.url) else { return }
+            DispatchQueue.main.async { [unowned self] in
+                memImage.image = UIImage(data: imageData)
+                activityIndicator.stopAnimating()
+            }
         }
-        memImage.load(url: url, activityIndicator)
     }
 }
